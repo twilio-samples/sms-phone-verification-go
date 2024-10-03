@@ -20,7 +20,22 @@ type App struct {
 // user indicating if there were errors submitting the form and if form
 // submission was successful.
 func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
+	files := []string{
+		"./ui/templates/base.tmpl",
+		"./ui/templates/code-request-form.tmpl",
+	}
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
 
+	err = ts.ExecuteTemplate(w, "base", nil)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+	}
 }
 
 // processCodeRequestForm processes submission of the code request form. If the
@@ -38,7 +53,22 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 // to the user indicating if there were errors submitting the form and if form
 // submission was successful.
 func (a App) renderCodeVerificationForm(w http.ResponseWriter, r *http.Request) {
+	files := []string{
+		"./ui/templates/base.tmpl",
+		"./ui/templates/code-verification-form.tmpl",
+	}
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
 
+	err = ts.ExecuteTemplate(w, "base", nil)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+	}
 }
 
 // processCodeVerificationForm processes submission of the code verification
