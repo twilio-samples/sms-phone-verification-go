@@ -56,7 +56,7 @@
                        name="number"
                        pattern="^\+[1-9]\d{1,14}$"
                        placeholder="Your phone number in E.164 format"
-                       value="{{ if .FormData.Number is defined }}{{ .FormData.Number }}{{ end }}"
+                       value="{{ if .FormData.Number }}{{ .FormData.Number }}{{ end }}"
                        class="{{ if .FormErrors.Number }}error{{ else }}normal{{ end }}"
                        required>
                 {{ if .FormErrors.Number }}
