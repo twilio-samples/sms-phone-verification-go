@@ -1,0 +1,27 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+    label {
+       @apply block mb-1 font-medium;
+    }
+    label.normal {
+       @apply text-gray-500;
+    }
+    label.error {
+        @apply text-rose-800;
+    }
+
+    input[type="text"],
+    input[type="password"],
+    input[type="tel"] {
+        @apply w-full rounded-md p-2 pl-3 border-2 placeholder:text-sm text-gray-500;
+    }
+    input.normal {
+        @apply border-slate-200;
+    }
+    input.error {
+        @apply border-rose-700 bg-rose-50 text-rose-800 placeholder:text-rose-400 shadow-inner;
+    }
+}
