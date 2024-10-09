@@ -7,12 +7,17 @@ import (
 	"os"
 	"text/template"
 
+	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/twilio/twilio-go"
+	verify "github.com/twilio/twilio-go/rest/verify/v2"
 )
 
 type App struct {
+	sessionName string
 	client *twilio.RestClient
+	store       *sessions.CookieStore
+}
 }
 
 // renderCodeRequestForm renders a form where the user can enter the details
@@ -106,10 +111,23 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	app := App{client: twilio.NewRestClientWithParams(twilio.ClientParams{
+
+	var store = sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
+	store.Options = &sessions.Options{
+		Domain:   "localhost",
+		Path:     "/",
+		MaxAge:   3600 * 8,
+		HttpOnly: true,
+	}
+
+	app := App{
+		client: twilio.NewRestClientWithParams(twilio.ClientParams{
 		Username: os.Getenv("TWILIO_ACCOUNT_SID"),
 		Password: os.Getenv("TWILIO_AUTH_TOKEN"),
-	})}
+		}),
+		sessionName: os.Getenv("SESSION_NAME"),
+		store:       store,
+	}
 
 	fileServer := http.FileServer(http.Dir("./static/"))
 
