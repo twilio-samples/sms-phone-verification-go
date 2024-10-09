@@ -82,6 +82,31 @@ func (v *ValidationCodeRequest) Validate() bool {
 
 	return len(v.Errors) == 0
 }
+
+// renderCodeRequestForm renders a form where the user can enter the details
+// required to request a verification code. The form can display messages to the
+// user indicating if there were errors submitting the form and if form
+// submission was successful.
+func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
+	template := "./ui/templates/code-request-form.tmpl"
+
+	session, err := a.store.Get(r, a.sessionName)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if flashes := session.Flashes(); len(flashes) > 0 {
+		if data, ok := flashes[0].(ValidationCodeRequest); ok {
+			render(w, template, data)
+			return
+		}
+	}
+
+	render(w, template, nil)
+}
+
 // processCodeRequestForm processes submission of the code request form. If the
 // submitted details are valid, then a request is made to Twilio for a
 // verification code to be sent to the user via SMS. If the submitted form
