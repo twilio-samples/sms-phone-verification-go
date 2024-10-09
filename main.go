@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
+	"strings"
 	"text/template"
 
 	"github.com/gorilla/sessions"
@@ -13,18 +15,19 @@ import (
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
 )
 
+var rxPhone = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
+
 type App struct {
 	sessionName string
-	client *twilio.RestClient
+	client      *twilio.RestClient
 	store       *sessions.CookieStore
 }
 }
 
-// renderCodeRequestForm renders a form where the user can enter the details
-// required to request a verification code. The form can display messages to the
-// user indicating if there were errors submitting the form and if form
-// submission was successful.
-func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
+type ValidationCodeRequest struct {
+	Username, Password, Number string
+	Errors                     map[string]string
+}
 	files := []string{
 		"./ui/templates/base.tmpl",
 		"./ui/templates/code-request-form.tmpl",
@@ -43,6 +46,36 @@ func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Validate validates if the username, password, and phone number supplied pass
+// the validation criteria.
+func (v *ValidationCodeRequest) Validate() bool {
+	v.Errors = make(map[string]string)
+
+	if strings.TrimSpace(v.Username) == "" {
+		v.Errors["username"] = "Please enter a username"
+	}
+
+	usernameLength := len(strings.TrimSpace(v.Username))
+	if usernameLength < 5 || usernameLength > 255 {
+		v.Errors["username"] = "Please enter a username"
+	}
+
+	if strings.TrimSpace(v.Password) == "" {
+		v.Errors["password"] = "Please enter a password"
+	}
+
+	passwordLength := len(strings.TrimSpace(v.Password))
+	if passwordLength < 5 || usernameLength > 255 {
+		v.Errors["password"] = "Please enter a password between 5 and 255 characters"
+	}
+
+	match := rxPhone.Match([]byte(v.Number))
+	if match == false {
+		v.Errors["Number"] = "Please enter a phone number in E.164 format"
+	}
+
+	return len(v.Errors) == 0
+}
 // processCodeRequestForm processes submission of the code request form. If the
 // submitted details are valid, then a request is made to Twilio for a
 // verification code to be sent to the user via SMS. If the submitted form
@@ -50,7 +83,60 @@ func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 // form, where any supplied form details that were correct will be pre-filled in
 // the form.
 func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
+	v := &ValidationCodeRequest{
+		Number:   r.PostFormValue("number"),
+		Password: r.PostFormValue("password"),
+		Username: r.PostFormValue("username"),
+	}
 
+	if v.Validate() == false {
+		session, err := a.store.Get(r, a.sessionName)
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		session.AddFlash(v)
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	params := &verify.CreateVerificationParams{}
+	params.SetChannel("sms")
+	params.SetTo(v.Number)
+
+	resp, err := a.client.VerifyV2.CreateVerification(os.Getenv("TWILIO_VERIFICATION_SID"), params)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if resp.Status == nil {
+		log.Println("response status was not set")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	session, err := a.store.Get(r, a.sessionName)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("storing phone number (%s) in session", v.Number)
+	session.Values["number"] = v.Number
+	err = session.Save(r, w)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	http.Redirect(w, r, "/verify", http.StatusSeeOther)
+	return
 }
 
 // renderCodeVerificationForm renders a form where the user can validate a
@@ -122,8 +208,8 @@ func main() {
 
 	app := App{
 		client: twilio.NewRestClientWithParams(twilio.ClientParams{
-		Username: os.Getenv("TWILIO_ACCOUNT_SID"),
-		Password: os.Getenv("TWILIO_AUTH_TOKEN"),
+			Username: os.Getenv("TWILIO_ACCOUNT_SID"),
+			Password: os.Getenv("TWILIO_AUTH_TOKEN"),
 		}),
 		sessionName: os.Getenv("SESSION_NAME"),
 		store:       store,
