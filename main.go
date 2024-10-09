@@ -22,15 +22,21 @@ type App struct {
 	client      *twilio.RestClient
 	store       *sessions.CookieStore
 }
+
+type VerificationResponse struct {
+	message string
+	error   bool
 }
 
 type ValidationCodeRequest struct {
 	Username, Password, Number string
 	Errors                     map[string]string
 }
+
+func render(w http.ResponseWriter, filename string, data interface{}) {
 	files := []string{
 		"./ui/templates/base.tmpl",
-		"./ui/templates/code-request-form.tmpl",
+		filename,
 	}
 	ts, err := template.ParseFiles(files...)
 	if err != nil {
@@ -39,7 +45,7 @@ type ValidationCodeRequest struct {
 		return
 	}
 
-	err = ts.ExecuteTemplate(w, "base", nil)
+	err = ts.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, "Internal Server Error", 500)
@@ -144,22 +150,36 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 // to the user indicating if there were errors submitting the form and if form
 // submission was successful.
 func (a App) renderCodeVerificationForm(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"./ui/templates/base.tmpl",
-		"./ui/templates/code-verification-form.tmpl",
-	}
-	ts, err := template.ParseFiles(files...)
+	template := "./ui/templates/code-verification-form.tmpl"
+
+	session, err := a.store.Get(r, a.sessionName)
 	if err != nil {
 		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	err = ts.ExecuteTemplate(w, "base", nil)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
+	if !a.phoneNumberSet(session) {
+		log.Println("Phone number not available in session or not set")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
+
+	if flashes := session.Flashes(); len(flashes) > 0 {
+		if data, ok := flashes[0].(VerificationResponse); ok {
+			render(w, template, data)
+			return
+		}
+	}
+
+	render(w, template, nil)
+}
+
+func (a App) phoneNumberSet(session *sessions.Session) bool {
+	val := session.Values["number"]
+	log.Println(session.Values)
+	number, ok := val.(string)
+	return ok && len(number) > 0
 }
 
 // processCodeVerificationForm processes submission of the code verification
@@ -168,7 +188,52 @@ func (a App) renderCodeVerificationForm(w http.ResponseWriter, r *http.Request) 
 // code is not valid, the reader is redirected back to the code verification
 // form.
 func (a App) processCodeVerificationForm(w http.ResponseWriter, r *http.Request) {
+	code := r.PostFormValue("code")
 
+	session, err := a.store.Get(r, a.sessionName)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	val := session.Values["number"]
+	number, ok := val.(string)
+	if !ok || len(number) == 0 {
+		log.Println("phone number not available in session or not set")
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	params := &verify.CreateVerificationCheckParams{}
+	params.SetTo(number)
+	params.SetCode(code)
+	resp, err := a.client.VerifyV2.CreateVerificationCheck(os.Getenv("TWILIO_VERIFICATION_SID"), params)
+
+	if err != nil {
+		session.AddFlash(&VerificationResponse{
+			message: "Validation code was not valid.",
+			error:   true,
+		})
+		log.Println(err.Error())
+		http.Redirect(w, r, "/verify", http.StatusSeeOther)
+		return
+	}
+
+	log.Printf("validation status was: %s", *resp.Status)
+
+	// Remove the phone number from the session
+	delete(session.Values, "number")
+	err = session.Save(r, w)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Redirect to the logged/in route as the user is now authenticated
+	http.Redirect(w, r, "/logged-in", http.StatusSeeOther)
+	return
 }
 
 // renderLoginPage renders a static HTML template telling the user that they are
