@@ -72,8 +72,8 @@ func (v *ValidationCodeRequest) Validate() bool {
 	}
 
 	passwordLength := len(strings.TrimSpace(v.Password))
-	if passwordLength < 5 || usernameLength > 255 {
-		v.Errors["password"] = "Please enter a password between 5 and 255 characters"
+	if passwordLength < 10 {
+		v.Errors["password"] = "Please enter a password at least 10 characters long"
 	}
 
 	match := rxPhone.Match([]byte(v.Number))
