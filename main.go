@@ -161,7 +161,7 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 
 	if resp.Status == nil {
 		log.Println("response status was not set")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, "response status was not set", http.StatusInternalServerError)
 		return
 	}
 
