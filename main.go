@@ -20,8 +20,8 @@ var rxPhone = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 
 type App struct {
 	sessionName, flashKey string
-	client      *twilio.RestClient
-	store       *sessions.CookieStore
+	client                *twilio.RestClient
+	store                 *sessions.CookieStore
 }
 
 type VerificationResponse struct {
@@ -32,25 +32,6 @@ type VerificationResponse struct {
 type ValidationCodeRequest struct {
 	Username, Password, Number string
 	Errors                     map[string]string
-}
-
-func render(w http.ResponseWriter, filename string, data interface{}) {
-	files := []string{
-		"./ui/templates/base.tmpl",
-		filename,
-	}
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-	}
 }
 
 // Validate validates if the username, password, and phone number supplied pass
@@ -77,11 +58,30 @@ func (v *ValidationCodeRequest) Validate() bool {
 	}
 
 	match := rxPhone.Match([]byte(v.Number))
-	if match == false {
+	if !match {
 		v.Errors["Number"] = "Please enter a phone number in E.164 format"
 	}
 
 	return len(v.Errors) == 0
+}
+
+func render(w http.ResponseWriter, filename string, data interface{}) {
+	files := []string{
+		"./ui/templates/base.tmpl",
+		filename,
+	}
+	ts, err := template.ParseFiles(files...)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	err = ts.ExecuteTemplate(w, "base", data)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "Internal Server Error", 500)
+	}
 }
 
 // renderCodeRequestForm renders a form where the user can enter the details
@@ -129,7 +129,7 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 		Username: r.PostFormValue("username"),
 	}
 
-	if v.Validate() == false {
+	if !v.Validate() {
 		session, err := a.store.Get(r, a.sessionName)
 		if err != nil {
 			log.Println(err.Error())
