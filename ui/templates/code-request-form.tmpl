@@ -8,10 +8,10 @@
     </div>
 
     <div class="row">
-        {{ if .FormErrors }}
+        {{ if .Errors }}
         <div class="mx-auto max-w-lg border-2 border-rose-700 rounded-md py-4 px-8 mb-3 text-center bg-rose-700 text-white font-medium drop-shadow-md">
-            {{ if .FormErrors.Verification }}
-                A verification code could not be submitted. Reason: {{ .FormErrors.Verification }}.
+            {{ if .Errors.Verification }}
+                A verification code could not be submitted. Reason: {{ .Errors.Verification }}.
             {{ else }}
                 There were some problems submitting the form.
             {{ end }}
@@ -23,43 +23,45 @@
             <div class="my-2">
                 <label 
                     for="username" 
-                    class="{{ if .FormErrors.Username }}error{{ else }}normal{{ end }}">Username:</label>
+                    class="{{ if .Errors.username }}error{{ else }}normal{{ end }}">Username:</label>
                 <input type="text"
                        id="username"
                        name="username"
-                       placeholder="A username between 5 and 255 chars"
-                       value="{{ if .FormData.Username }}{{ .FormData.Username }}{{ end }}"
-                       class="{{ if .FormErrors.Username }}error{{ else }}normal{{ end }}"
+                       placeholder="A username between 5 & 255 characters"
+                       value="{{ if .Username }}{{ .Username }}{{ end }}"
+                       class="{{ if .Errors.username }}error{{ else }}normal{{ end }}"
                        required>
-                {{ if .FormErrors.Username }}
+                {{ if .Errors.username }}
                     <p class="text-sm mt-1 text-rose-800">The username must be between 5 and 255 chars in length.</p>
                 {{ end }}
             </div>
             <div class="my-2">
                 <label for="password"
-                       class="{{ if .FormErrors.Password }}label-error{{ end }}">Password:</label>
+                       class="{{ if .Errors.password }}label-error{{ end }}">Password:</label>
                 <input type="password"
                        id="password"
                        name="password"
-                       placeholder="A password at least 10 chars in length"
-                       class="{{ if .FormErrors.Password }}error{{ else }}normal{{ end }}"
+                       {{ if not .Errors.password }}
+                       placeholder="A password 10 characters or longer"
+                       {{ end }}
+                       class="{{ if .Errors.password }}error{{ else }}normal{{ end }}"
                        required>
-                {{ if .FormErrors.Password }}
-                <p class="text-sm mt-1 text-rose-800">The password must be at least ten characters in length.</p>
+                {{ if .Errors.password }}
+                <p class="text-sm mt-1 text-rose-800">Please enter a password at least 10 characters long</p>
                 {{end}}
             </div>
             <div class="my-2">
                 <label for="number"
-                       class="{{ if .FormErrors.Number }}label-error{{ end }}">Phone number:</label>
+                       class="{{ if .Errors.number }}label-error{{ end }}">Phone number:</label>
                 <input type="tel"
                        id="number"
                        name="number"
                        pattern="^\+[1-9]\d{1,14}$"
                        placeholder="Your phone number in E.164 format"
-                       value="{{ if .FormData.Number }}{{ .FormData.Number }}{{ end }}"
-                       class="{{ if .FormErrors.Number }}error{{ else }}normal{{ end }}"
+                       value="{{ if .Number }}{{ .Number }}{{ end }}"
+                       class="{{ if .Errors.number }}error{{ else }}normal{{ end }}"
                        required>
-                {{ if .FormErrors.Number }}
+                {{ if .Errors.number }}
                 <p class="text-sm mt-1 text-rose-800">The phone number must be in <a href="https://www.twilio.com/docs/glossary/what-e164" target="_blank" class="underline decoration-2 decoration-rose-800 underline-offset-2">E.164 format</a>.</p>
                 {{ end }}
             </div>
