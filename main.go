@@ -182,7 +182,6 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, "/verify", http.StatusSeeOther)
-	return
 }
 
 // renderCodeVerificationForm renders a form where the user can validate a
@@ -224,7 +223,6 @@ func (a App) renderCodeVerificationForm(w http.ResponseWriter, r *http.Request) 
 
 func (a App) phoneNumberSet(session *sessions.Session) bool {
 	val := session.Values["number"]
-	log.Println(session.Values)
 	number, ok := val.(string)
 	return ok && len(number) > 0
 }
@@ -290,7 +288,6 @@ func (a App) processCodeVerificationForm(w http.ResponseWriter, r *http.Request)
 
 	// Redirect to the logged/in route as the user is now authenticated
 	http.Redirect(w, r, "/logged-in", http.StatusSeeOther)
-	return
 }
 
 // renderLoginPage renders a static HTML template telling the user that they are
