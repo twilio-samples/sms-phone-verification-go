@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 var rxPhone = regexp.MustCompile(`^\+[1-9]\d{1,14}$`)
 
 type App struct {
-	sessionName string
+	sessionName, flashKey string
 	client      *twilio.RestClient
 	store       *sessions.CookieStore
 }
@@ -97,8 +98,16 @@ func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if flashes := session.Flashes(); len(flashes) > 0 {
-		if data, ok := flashes[0].(ValidationCodeRequest); ok {
+	flashes := session.Flashes(a.flashKey)
+	err = session.Save(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(flashes) > 0 {
+		flashMessage := flashes[0]
+		if data, ok := flashMessage.(*ValidationCodeRequest); ok {
 			render(w, template, data)
 			return
 		}
@@ -128,7 +137,13 @@ func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		session.AddFlash(v)
+		session.AddFlash(v, a.flashKey)
+		err = session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -190,8 +205,15 @@ func (a App) renderCodeVerificationForm(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if flashes := session.Flashes(); len(flashes) > 0 {
-		if data, ok := flashes[0].(VerificationResponse); ok {
+	flashes := session.Flashes(a.flashKey)
+	err = session.Save(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if len(flashes) > 0 {
+		if data, ok := flashes[0].(*VerificationResponse); ok {
 			render(w, template, data)
 			return
 		}
@@ -236,11 +258,18 @@ func (a App) processCodeVerificationForm(w http.ResponseWriter, r *http.Request)
 	resp, err := a.client.VerifyV2.CreateVerificationCheck(os.Getenv("TWILIO_VERIFICATION_SID"), params)
 
 	if err != nil {
+		log.Println(err.Error())
+
 		session.AddFlash(&VerificationResponse{
 			message: "Validation code was not valid.",
 			error:   true,
-		})
-		log.Println(err.Error())
+		}, a.flashKey)
+		err = session.Save(r, w)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
 		http.Redirect(w, r, "/verify", http.StatusSeeOther)
 		return
 	}
@@ -296,11 +325,15 @@ func main() {
 		HttpOnly: true,
 	}
 
+	// Register the type so that it can be flashed to the session
+	gob.Register(&ValidationCodeRequest{})
+
 	app := App{
 		client: twilio.NewRestClientWithParams(twilio.ClientParams{
 			Username: os.Getenv("TWILIO_ACCOUNT_SID"),
 			Password: os.Getenv("TWILIO_AUTH_TOKEN"),
 		}),
+		flashKey:    os.Getenv("FLASH_KEY"),
 		sessionName: os.Getenv("SESSION_NAME"),
 		store:       store,
 	}
