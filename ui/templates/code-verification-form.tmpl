@@ -8,14 +8,9 @@
     </div>
 
     <div class="row">
-        {{ if .SuccessMessage }}
-        <div class="mx-auto max-w-lg border-2 border-emerald-700 rounded-md py-4 px-8 mb-3 text-center bg-emerald-700 text-white font-medium drop-shadow-md">
-            Verification check succeeded.
-        </div>
-        {{ end }}
-        {{ if and (.FormError) (ne .FormError "") }}
+        {{ if .Error }}
             <div class="mx-auto max-w-lg border-2 border-rose-700 rounded-md py-4 px-8 mb-3 text-center bg-rose-700 text-white font-medium drop-shadow-md">
-                {{ .FormError }}
+                {{ .Message }}
             </div>
         {{end}}
         <form action="/verify"

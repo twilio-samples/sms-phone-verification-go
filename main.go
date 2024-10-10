@@ -25,8 +25,8 @@ type App struct {
 }
 
 type VerificationResponse struct {
-	message string
-	error   bool
+	Message string
+	Error   bool
 }
 
 type ValidationCodeRequest struct {
@@ -260,10 +260,13 @@ func (a App) processCodeVerificationForm(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		log.Println(err.Error())
 
-		session.AddFlash(&VerificationResponse{
-			message: "Validation code was not valid.",
-			error:   true,
-		}, a.flashKey)
+		session.AddFlash(
+			&VerificationResponse{
+				Message: "The verification code was not valid",
+				Error:   true,
+			},
+			a.flashKey,
+		)
 		err = session.Save(r, w)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -327,6 +330,7 @@ func main() {
 
 	// Register the type so that it can be flashed to the session
 	gob.Register(&ValidationCodeRequest{})
+	gob.Register(&VerificationResponse{})
 
 	app := App{
 		client: twilio.NewRestClientWithParams(twilio.ClientParams{
