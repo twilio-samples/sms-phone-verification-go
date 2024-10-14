@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/twilio/twilio-go"
+	lookups "github.com/twilio/twilio-go/rest/lookups/v2"
 	verify "github.com/twilio/twilio-go/rest/verify/v2"
 )
 
@@ -29,14 +30,15 @@ type VerificationResponse struct {
 	Error   bool
 }
 
-type ValidationCodeRequest struct {
+type VerificationCodeRequest struct {
+	client                     *twilio.RestClient
 	Username, Password, Number string
 	Errors                     map[string]string
 }
 
 // Validate validates if the username, password, and phone number supplied pass
 // the validation criteria.
-func (v *ValidationCodeRequest) Validate() bool {
+func (v *VerificationCodeRequest) Validate() bool {
 	v.Errors = make(map[string]string)
 
 	if strings.TrimSpace(v.Username) == "" {
@@ -57,12 +59,21 @@ func (v *ValidationCodeRequest) Validate() bool {
 		v.Errors["password"] = "Please enter a password at least 10 characters long"
 	}
 
-	match := rxPhone.Match([]byte(v.Number))
-	if !match {
-		v.Errors["Number"] = "Please enter a phone number in E.164 format"
+	if !v.isValidPhoneNumber(v.client) {
+		v.Errors["number"] = "Please enter a valid phone number in E.164 format"
 	}
 
 	return len(v.Errors) == 0
+}
+
+func (v *VerificationCodeRequest) isValidPhoneNumber(client *twilio.RestClient) bool {
+	resp, err := client.LookupsV2.FetchPhoneNumber(v.Number, &lookups.FetchPhoneNumberParams{})
+	if err != nil {
+		log.Println(err.Error())
+		return false
+	}
+
+	return *resp.Valid
 }
 
 func render(w http.ResponseWriter, filename string, data interface{}) {
@@ -107,7 +118,7 @@ func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 
 	if len(flashes) > 0 {
 		flashMessage := flashes[0]
-		if data, ok := flashMessage.(*ValidationCodeRequest); ok {
+		if data, ok := flashMessage.(*VerificationCodeRequest); ok {
 			render(w, template, data)
 			return
 		}
@@ -123,7 +134,8 @@ func (a App) renderCodeRequestForm(w http.ResponseWriter, r *http.Request) {
 // form, where any supplied form details that were correct will be pre-filled in
 // the form.
 func (a App) processCodeRequestForm(w http.ResponseWriter, r *http.Request) {
-	v := &ValidationCodeRequest{
+	v := &VerificationCodeRequest{
+		client:   a.client,
 		Number:   r.PostFormValue("number"),
 		Password: r.PostFormValue("password"),
 		Username: r.PostFormValue("username"),
@@ -326,7 +338,7 @@ func main() {
 	}
 
 	// Register the type so that it can be flashed to the session
-	gob.Register(&ValidationCodeRequest{})
+	gob.Register(&VerificationCodeRequest{})
 	gob.Register(&VerificationResponse{})
 
 	app := App{
