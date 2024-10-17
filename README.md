@@ -70,6 +70,22 @@ go run main.go
 ```
 
 With the application ready to go, open <http://localhost:8000> in your browser of choice.
+There, you'll see the form where you can request a verification code. 
+
+![A web-based form to request a verification code. The form has three fields sorted vertically, and a button to submit the form, labelled "Request Verification Code". The first field is for the user's username, which can be between five and 255 chars. The second is for the user's password, which must be at least 10 characters long. The third is for the user's phone number, which must be in E.164 format.](./docs/images/request-verification-code.png)
+
+Enter your username, password, and phone number and submit the form.
+Then, you'll see a form which you can validate the verification code.
+
+![A web-based form to validate a verification code. The form has one field, which is to take the user's verification code, and a button to submit the form, labelled "Validate Verification Code".](./docs/images/validate-verification-code.png)
+
+Enter the verification code that you should have received via SMS and submit the form.
+You will now be "authenticated" with the application, and on the logged in page.
+
+![A page showing that a user is logged in with the message "You are now logged in." in the center of the page](./docs/images/logged-in-page.png)
+
+There is no explicit log out functionality. 
+To do that, you'll have to clear the cookies for localhost using your browser's settings tooling.
 
 ## Contributing
 
