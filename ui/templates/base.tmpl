@@ -1,0 +1,26 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>{{template "title" .}} — SMS Phone Verification</title>
+    <link rel="shortcut icon" href="https://getlaminas.org/images/favicon/favicon.ico" />
+    <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+<body class="bg-slate-50">
+    <div>
+        <main class="my-12 mt-20">
+            {{template "content" .}}
+        </main>
+    </div>
+
+    <footer class="mt-1 text-gray-400 text-center mx-2 sticky">
+        <div>
+            <hr class="drop-shadow-sm" />
+        </div>
+    </footer>
+</body>
+</html>
+{{end}}
