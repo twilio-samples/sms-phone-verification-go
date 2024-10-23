@@ -1,0 +1,72 @@
+{{define "title"}}Request Verification Code{{end}}
+
+{{define "content"}}
+    <div class="mx-auto max-w-lg my-3 mb-8">
+        <h1 class="text-3xl font-semibold text-slate-700 mx-1">SMS Phone Verification</h1>
+        <h2 class="text-xl font-semibold text-slate-700 mx-1 mt-4">1. Submit Your Details</h2>
+        <p class="mt-1 text-base text-slate-500 mx-1">Fill out and submit the form below to start the registration process.</p>
+    </div>
+
+    <div class="row">
+        {{ if .Errors }}
+        <div class="mx-auto max-w-lg border-2 border-rose-700 rounded-md py-4 px-8 mb-3 text-center bg-rose-700 text-white font-medium drop-shadow-md">
+            {{ if .Errors.Verification }}
+                A verification code could not be submitted. Reason: {{ .Errors.Verification }}.
+            {{ else }}
+                There were some problems submitting the form.
+            {{ end }}
+        </div>
+        {{end}}
+        <form action="/"
+              method="post"
+              class="bg-white mx-auto max-w-lg border-2 border-slate-100 rounded-md py-6 px-8 grid grid-cols-1 gap-3 drop-shadow-sm focus:shadow-inner pb-8">
+            <div class="my-2">
+                <label 
+                    for="username" 
+                    class="{{ if .Errors.username }}error{{ else }}normal{{ end }}">Username:</label>
+                <input type="text"
+                       id="username"
+                       name="username"
+                       placeholder="A username between 5 & 255 characters"
+                       value="{{ if .Username }}{{ .Username }}{{ end }}"
+                       class="{{ if .Errors.username }}error{{ else }}normal{{ end }}"
+                       required>
+                {{ if .Errors.username }}
+                    <p class="text-sm mt-1 text-rose-800">The username must be between 5 and 255 chars in length.</p>
+                {{ end }}
+            </div>
+            <div class="my-2">
+                <label for="password"
+                       class="{{ if .Errors.password }}label-error{{ end }}">Password:</label>
+                <input type="password"
+                       id="password"
+                       name="password"
+                       {{ if not .Errors.password }}
+                       placeholder="A password 10 characters or longer"
+                       {{ end }}
+                       class="{{ if .Errors.password }}error{{ else }}normal{{ end }}"
+                       required>
+                {{ if .Errors.password }}
+                <p class="text-sm mt-1 text-rose-800">Please enter a password at least 10 characters long</p>
+                {{end}}
+            </div>
+            <div class="my-2">
+                <label for="number"
+                       class="{{ if .Errors.number }}label-error{{ end }}">Phone number:</label>
+                <input type="tel"
+                       id="number"
+                       name="number"
+                       pattern="^\+[1-9]\d{1,14}$"
+                       placeholder="Your phone number in E.164 format"
+                       value="{{ if .Number }}{{ .Number }}{{ end }}"
+                       class="{{ if .Errors.number }}error{{ else }}normal{{ end }}"
+                       required>
+                {{ if .Errors.number }}
+                <p class="text-sm mt-1 text-rose-800">The phone number must be in <a href="https://www.twilio.com/docs/glossary/what-e164" target="_blank" class="underline decoration-2 decoration-rose-800 underline-offset-2">E.164 format</a>.</p>
+                {{ end }}
+            </div>
+            <hr class="mt-1 drop-shadow-md mx-auto w-1/2">
+            <input type="submit" name="submit" value="Request Verification Code" class="border-2 bg-indigo-600 text-white font-medium rounded-md p-3 py-2 mt-4 hover:cursor-pointer hover:bg-indigo-700">
+        </form>
+    </div>
+{{end}}
